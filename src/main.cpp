@@ -202,7 +202,7 @@ int main() {
   double max_vel = 49.5;
   double time_delta = 0.02;
   double ref_vel = 0;
-  h.onMessage([&ref_vel, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  h.onMessage([&ref_vel, &lane, &time_delta, &max_vel, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -257,25 +257,44 @@ int main() {
           	}
 
           	bool too_close = false;
+          	bool car_on_left_lane = false;
+          	bool car_on_right_lane = false;
+          	double car_in_front_speed = 0.0;
           	for(int i = 0; i < sensor_fusion.size(); i++) {
                 float d = sensor_fusion[i][6];
-                if(d < (2+4*lane+2) && d > (2+4*lane-2)) {
-                    double vx = sensor_fusion[i][3];
-                    double vy = sensor_fusion[i][4];
-                    double check_speed = sqrt(vx*vx + vy*vy);
-                    double check_car_s = sensor_fusion[i][5];
+                double vx = sensor_fusion[i][3];
+                double vy = sensor_fusion[i][4];
+                double check_speed = sqrt(vx*vx + vy*vy);
+                double check_car_s = sensor_fusion[i][5];
 
-                    // Project next timeframe
-                    check_car_s += ((double) prev_size * time_delta * check_speed);
+                // Project next timeframe
+                check_car_s += ((double) prev_size * time_delta * check_speed);
+
+                if(d < (2+4*lane+2) && d > (2+4*lane-2)) { // Same lane
 
                     if((check_car_s>car_s)&& ((check_car_s-car_s)< 30)) {
-                        too_close=true;
+                        too_close = true;
+                        car_in_front_speed = check_speed;
+                    }
+                } else if (d < (2+4*(lane-1)+2) && d > (2+4*(lane-1)-2)){ // Left lane
+                    if((check_car_s-car_s> -10)&& ((check_car_s-car_s)< 30)) {
+                        car_on_left_lane = true;
+                    }
+                } else if (d < (2+4*(lane+1)+2) && d > (2+4*(lane+1)-2)) { // Right lane
+                    if((check_car_s-car_s>-10)&& ((check_car_s-car_s)< 30)) {
+                        car_on_right_lane = true;
                     }
                 }
           	}
 
-          	if(too_close) {
-                ref_vel -= .224;
+          	if(too_close ) {
+                if(lane > 0 && !car_on_left_lane) {
+                    lane --;
+                } else if (lane < 2 && !car_on_right_lane){
+                    lane++;
+                } else if(ref_vel > car_in_front_speed) {
+                    ref_vel -= .224;
+                }
           	} else if(ref_vel < max_vel){
                 ref_vel += .224;
           	}
