@@ -240,11 +240,37 @@ int main() {
           	vector<double> pts_x;
           	vector<double> pts_y;
 
+            int lane = 1;
+            double ref_vel = 49.5;
+            double time_delta = 0.02;
+
           	double ref_x = car_x;
           	double ref_y = car_y;
           	double ref_yaw = deg2rad(car_yaw);
 
           	int prev_size = previous_path_x.size();
+
+          	if(prev_size > 0) {
+                car_s = end_path_s;
+          	}
+
+          	bool too_close = false;
+          	for(int i = 0; i < sensor_fusion.size(); i++) {
+                float d = sensor_fusion[i][6];
+                if(d < (2+4*lane+2) && d > (2+4*lane-2)) {
+                    double vx = sensor_fusion[i][3];
+                    double vy = sensor_fusion[i][4];
+                    double check_speed = sqrt(vx*vx + vy*vy);
+                    double check_car_s = sensor_fusion[i][5];
+
+                    // Project next timeframe
+                    check_car_s += ((double) prev_size * time_delta * check_speed);
+
+                    if((check_car_s>car_s)&& ((check_car_s-car_s)< 30)) {
+                        ref_vel = 29.5;
+                    }
+                }
+          	}
 
           	// Initialize two points when current path doesn't have enough to generate a spline
             if(prev_size < 2) {
@@ -269,8 +295,6 @@ int main() {
                 pts_y.push_back(ref_y_prev);
                 pts_y.push_back(ref_y);
             }
-
-            int lane = 1;
 
             // Generate spline points
             vector<int> steps = {30,60,90};
@@ -308,10 +332,9 @@ int main() {
             double target_dist = sqrt(target_x*target_x+target_y*target_y);
 
             double x_add_on = 0;
-            double ref_vel = 49.5;
             // Fill in the remaining points from the spline
             for(int i = 1; i <= 50-previous_path_x.size(); i++) {
-                double N = (target_dist/(.02 * ref_vel/2.24));
+                double N = (target_dist/(time_delta * ref_vel/2.24));
                 double x_point = x_add_on + target_x /N;
                 double y_point = s(x_point);
 
