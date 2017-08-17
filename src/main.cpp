@@ -287,7 +287,7 @@ int main() {
                         car_on_left_lane = true;
                     }
                 } else if (is_on_lane(d, lane+1)) { // Right lane
-                    if(s_distance > -detection_distance && s_distance < detection_distance) {
+                    if(s_distance > -detection_distance_back && s_distance < detection_distance) {
                         car_on_right_lane = true;
                     }
                 }
