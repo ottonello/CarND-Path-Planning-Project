@@ -160,6 +160,10 @@ vector<double> getXY(double s, double d, vector<double> maps_s, vector<double> m
 
 }
 
+bool is_on_lane(double d, int lane){
+    return d < (2+4*lane+2) && d > (2+4*lane-2);
+}
+
 int main() {
   uWS::Hub h;
 
@@ -270,17 +274,17 @@ int main() {
                 // Project next timeframe
                 check_car_s += ((double) prev_size * time_delta * check_speed);
 
-                if(d < (2+4*lane+2) && d > (2+4*lane-2)) { // Same lane
+                if(is_on_lane(d, lane)) { // Same lane
 
                     if((check_car_s>car_s)&& ((check_car_s-car_s)< 30)) {
                         too_close = true;
                         car_in_front_speed = check_speed;
                     }
-                } else if (d < (2+4*(lane-1)+2) && d > (2+4*(lane-1)-2)){ // Left lane
+                } else if (is_on_lane(d, lane-1)){ // Left lane
                     if((check_car_s-car_s> -10)&& ((check_car_s-car_s)< 30)) {
                         car_on_left_lane = true;
                     }
-                } else if (d < (2+4*(lane+1)+2) && d > (2+4*(lane+1)-2)) { // Right lane
+                } else if (is_on_lane(d, lane+1)) { // Right lane
                     if((check_car_s-car_s>-10)&& ((check_car_s-car_s)< 30)) {
                         car_on_right_lane = true;
                     }
