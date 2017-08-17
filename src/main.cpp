@@ -204,7 +204,7 @@ int main() {
   static const double max_vel = 49.5;
   static const double time_delta = 0.02;
   static const double detection_distance = 30;
-  static const double detection_distance_back = 10;
+  static const double detection_distance_back = 15;
 
   int lane = 1;
   double ref_vel = 0;
