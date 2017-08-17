@@ -164,6 +164,14 @@ bool is_on_lane(double d, int lane){
     return d < (2+4*lane+2) && d > (2+4*lane-2);
 }
 
+enum State {
+    KEEP_LANE,
+    SLOW_DOWN,
+    CHANGE_LEFT,
+    CHANGE_RIGHT,
+    KEEP_SPEED
+};
+
 int main() {
   uWS::Hub h;
 
@@ -201,14 +209,15 @@ int main() {
   	map_waypoints_dy.push_back(d_y);
   }
 
-  static const double max_vel = 49.5;
+  static const double max_vel = 49.0;
   static const double time_delta = 0.02;
   static const double detection_distance = 30;
-  static const double detection_distance_back = 15;
+  static const double detection_distance_back = 5;
 
+  State state = KEEP_LANE;
   int lane = 1;
   double ref_vel = 0;
-  h.onMessage([&ref_vel, &lane, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  h.onMessage([&state, &ref_vel, &lane, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -280,7 +289,8 @@ int main() {
                 if(is_on_lane(d, lane)) { // Same lane
                     if(s_distance > 0 && s_distance < detection_distance) {
                         too_close = true;
-                        car_in_front_speed = check_speed;
+                        // Car speed is in m/s
+                        car_in_front_speed = check_speed *2.24;
                     }
                 } else if (is_on_lane(d, lane-1)){ // Left lane
                     if(s_distance > -detection_distance_back && s_distance < detection_distance) {
@@ -295,14 +305,31 @@ int main() {
 
           	if(too_close ) {
                 if(lane > 0 && !car_on_left_lane) {
-                    lane --;
+                    state = CHANGE_LEFT;
                 } else if (lane < 2 && !car_on_right_lane){
-                    lane++;
-                } else if(ref_vel > car_in_front_speed) {
-                    ref_vel -= .224;
+                    state = CHANGE_RIGHT;
+                } else if(ref_vel > car_in_front_speed){
+                    state = SLOW_DOWN;
+                } else {
+                    state = KEEP_SPEED;
                 }
-          	} else if(ref_vel < max_vel){
-                ref_vel += .224;
+          	} else {
+                state = KEEP_LANE;
+          	}
+
+
+          	//cout << state<< endl;
+          	switch(state){
+                case CHANGE_LEFT: lane--; break;
+                case CHANGE_RIGHT: lane++; break;
+                case KEEP_LANE:
+                    if(ref_vel < max_vel){
+                        ref_vel += 10 / .224*time_delta;
+                    }
+                    break;
+                case SLOW_DOWN:
+                    ref_vel -= .224;
+                    break;
           	}
 
           	// Initialize two points when current path doesn't have enough to generate a spline
