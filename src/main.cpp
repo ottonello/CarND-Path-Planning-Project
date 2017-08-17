@@ -201,12 +201,14 @@ int main() {
   	map_waypoints_dy.push_back(d_y);
   }
 
+  static const double max_vel = 49.5;
+  static const double time_delta = 0.02;
+  static const double detection_distance = 30;
+  static const double detection_distance_back = 10;
 
   int lane = 1;
-  double max_vel = 49.5;
-  double time_delta = 0.02;
   double ref_vel = 0;
-  h.onMessage([&ref_vel, &lane, &time_delta, &max_vel, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  h.onMessage([&ref_vel, &lane, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -273,19 +275,19 @@ int main() {
 
                 // Project next timeframe
                 check_car_s += ((double) prev_size * time_delta * check_speed);
+                double s_distance = check_car_s - car_s;
 
                 if(is_on_lane(d, lane)) { // Same lane
-
-                    if((check_car_s>car_s)&& ((check_car_s-car_s)< 30)) {
+                    if(s_distance > 0 && s_distance < detection_distance) {
                         too_close = true;
                         car_in_front_speed = check_speed;
                     }
                 } else if (is_on_lane(d, lane-1)){ // Left lane
-                    if((check_car_s-car_s> -10)&& ((check_car_s-car_s)< 30)) {
+                    if(s_distance > -detection_distance_back && s_distance < detection_distance) {
                         car_on_left_lane = true;
                     }
                 } else if (is_on_lane(d, lane+1)) { // Right lane
-                    if((check_car_s-car_s>-10)&& ((check_car_s-car_s)< 30)) {
+                    if(s_distance > -detection_distance && s_distance < detection_distance) {
                         car_on_right_lane = true;
                     }
                 }
