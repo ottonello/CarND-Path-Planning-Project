@@ -256,21 +256,13 @@ int main() {
 
           	json msgJson;
 
-            // Spare points which we'll use for generating a spline
-          	vector<double> pts_x;
-          	vector<double> pts_y;
-
-
-          	double ref_x = car_x;
-          	double ref_y = car_y;
-          	double ref_yaw = deg2rad(car_yaw);
-
           	int prev_size = previous_path_x.size();
 
           	if(prev_size > 0) {
                 car_s = end_path_s;
           	}
 
+          	// Calculate new desired behaviour based on location and sensor data
           	bool too_close = false;
           	bool car_on_left_lane = false;
           	bool car_on_right_lane = false;
@@ -332,6 +324,14 @@ int main() {
                     break;
           	}
 
+            // Sparse points which we'll use for generating a spline
+          	vector<double> pts_x;
+          	vector<double> pts_y;
+
+          	double ref_x = car_x;
+          	double ref_y = car_y;
+          	double ref_yaw = deg2rad(car_yaw);
+
           	// Initialize two points when current path doesn't have enough to generate a spline
             if(prev_size < 2) {
                 double prev_car_x = car_x - cos(car_yaw);
@@ -343,6 +343,7 @@ int main() {
                 pts_y.push_back(prev_car_y);
                 pts_y.push_back(car_y);
             } else {
+            	//
                 ref_x = previous_path_x[prev_size-1];
                 ref_y = previous_path_y[prev_size-1];
 
