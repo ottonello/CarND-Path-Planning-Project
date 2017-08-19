@@ -209,10 +209,10 @@ int main() {
   	map_waypoints_dy.push_back(d_y);
   }
 
-  static const double max_vel = 49.0;
+  static const double max_vel = 49.2;
   static const double time_delta = 0.02;
   static const double detection_distance = 30;
-  static const double detection_distance_back = 5;
+  static const double detection_distance_back = 10;
 
   State state = KEEP_LANE;
   int lane = 1;
@@ -324,11 +324,11 @@ int main() {
                 case CHANGE_RIGHT: lane++; break;
                 case KEEP_LANE:
                     if(ref_vel < max_vel){
-                        ref_vel += 10 / .224*time_delta;
+                        ref_vel += 7 / .224*time_delta;
                     }
                     break;
                 case SLOW_DOWN:
-                    ref_vel -= .224;
+                    ref_vel -= 4 / .224*time_delta;;
                     break;
           	}
 
@@ -386,16 +386,18 @@ int main() {
                 next_y_vals.push_back(previous_path_y[i]);
             }
 
-            // TODO review, this calculates how many points we need in the spline so we travel at the desired speed
+            // This calculates how many points we need in the spline so we travel at the desired speed
+            // by approximating the length of the segment using a straight line
             double target_x = 30.0;
             double target_y = s(target_x);
             double target_dist = sqrt(target_x*target_x+target_y*target_y);
+            // Number of required points for the given speed
+            double N = target_dist / (time_delta * ref_vel/2.24);
 
             double x_add_on = 0;
             // Fill in the remaining points from the spline
             for(int i = 1; i <= 50-previous_path_x.size(); i++) {
-                double N = (target_dist/(time_delta * ref_vel/2.24));
-                double x_point = x_add_on + target_x /N;
+                double x_point = x_add_on + target_x / N;
                 double y_point = s(x_point);
 
                 x_add_on = x_point;
