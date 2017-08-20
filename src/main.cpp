@@ -209,10 +209,11 @@ int main() {
   	map_waypoints_dy.push_back(d_y);
   }
 
-  static const double max_vel = 49.2;
+  static const double max_vel = 49.1;
   static const double time_delta = 0.02;
   static const double detection_distance = 30;
   static const double detection_distance_back = 10;
+  static const vector<int> spline_steps = {30,60,90};
 
   State state = KEEP_LANE;
   int lane = 1;
@@ -263,7 +264,7 @@ int main() {
           	}
 
           	// Calculate new desired behaviour based on location and sensor data
-          	bool too_close = false;
+          	bool car_in_front = false;
           	bool car_on_left_lane = false;
           	bool car_on_right_lane = false;
           	double car_in_front_speed = 0.0;
@@ -280,7 +281,7 @@ int main() {
 
                 if(is_on_lane(d, lane)) { // Same lane
                     if(s_distance > 0 && s_distance < detection_distance) {
-                        too_close = true;
+                        car_in_front = true;
                         // Car speed is in m/s
                         car_in_front_speed = check_speed *2.24;
                     }
@@ -295,7 +296,7 @@ int main() {
                 }
           	}
 
-          	if(too_close ) {
+          	if(car_in_front ) {
                 if(lane > 0 && !car_on_left_lane) {
                     state = CHANGE_LEFT;
                 } else if (lane < 2 && !car_on_right_lane){
@@ -315,11 +316,11 @@ int main() {
                 case CHANGE_RIGHT: lane++; break;
                 case KEEP_LANE:
                     if(ref_vel < max_vel){
-                        ref_vel += 7 / .224*time_delta;
+                    	ref_vel += 7 / .224*time_delta;
                     }
                     break;
                 case SLOW_DOWN:
-                    ref_vel -= 4 / .224*time_delta;;
+                	ref_vel -= 4 / .224*time_delta;
                     break;
           	}
 
@@ -331,7 +332,7 @@ int main() {
           	double ref_y = car_y;
           	double ref_yaw = deg2rad(car_yaw);
 
-          	// Initialize two points when current path doesn't have enough to generate a spline
+          	// Initial spline points
             if(prev_size < 2) {
                 double prev_car_x = car_x - cos(car_yaw);
                 double prev_car_y = car_y - sin(car_yaw);
@@ -342,8 +343,7 @@ int main() {
                 pts_y.push_back(prev_car_y);
                 pts_y.push_back(car_y);
             } else {
-            	//
-                ref_x = previous_path_x[prev_size-1];
+            	ref_x = previous_path_x[prev_size-1];
                 ref_y = previous_path_y[prev_size-1];
 
                 double ref_x_prev = previous_path_x[prev_size-2];
@@ -356,10 +356,9 @@ int main() {
                 pts_y.push_back(ref_y);
             }
 
-            // Generate spline points
-            vector<int> steps = {30,60,90};
-            for(int i = 0; i<steps.size(); i++){
-                vector<double> next_wp = getXY(car_s + steps[i],(2+4*lane), map_waypoints_s,map_waypoints_x,map_waypoints_y);
+            // Generate more spline points
+            for(int i = 0; i<spline_steps.size(); i++){
+                vector<double> next_wp = getXY(car_s + spline_steps[i],(2+4*lane), map_waypoints_s,map_waypoints_x,map_waypoints_y);
                 pts_x.push_back(next_wp[0]);
                 pts_y.push_back(next_wp[1]);
             }
